@@ -19,8 +19,28 @@ type BidOrderReturn @entity {
   bid_withdrawn: Boolean! # bool
 }
 
+type Nft @entity {
+  id: ID!
+  blockNumber: BigInt!
+  transactionHash: Bytes!
+  tokenAddress: Bytes!
+  tokenId: BigInt!
+  tokenURI: String!
+  creator: Bytes!
+  owner: Bytes!
+  # royalties: Array!
+  createdAt: BigInt!
+  #collection: Collection!
+  sale: Sale
+  bids: [Bid!]!
+  histories: [History!]
+  piNFT: [Energize!]
+  ReleaseToken: [ReleaseToken!]
+}
+
 type Energize @entity {
   id: ID!
+  to: Bytes!
   from: Bytes!
   tokenId: BigInt!
   erc20Contract: Bytes!
@@ -59,5 +79,40 @@ type TokenMetaReturn @entity {
   data_bidStartTime: BigInt! # uint256
   data_bidEndTime: BigInt! # uint256
   data_currentOwner: Bytes! # address
-  #id: BigInt! # uint256
+  tokenId: BigInt! # uint256
+}
+
+
+
+
+type History @entity{
+  id: ID!
+  event: String!
+  from: Bytes!
+  to: Bytes!
+  createdAt: BigInt!
+  price: BigInt
+}
+
+type Sale @entity{
+  id: ID!
+  saleId: BigInt!
+  tokenAddress: Bytes!
+  tokenID: BigInt!
+  price: BigInt!
+  saleType: String!
+  status: Boolean
+  bidStartTime: BigInt
+  bidEndTime: BigInt
+  currentOwner: Bytes!
+}
+
+type Bid @entity{
+  id: ID!
+  bidId: BigInt!
+  saleId: BigInt!
+  sellerAddress: Bytes!
+  buyerAddress: Bytes!
+  price: BigInt!
+  withdrawn: Boolean!
 }

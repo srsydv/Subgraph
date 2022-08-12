@@ -1,14 +1,18 @@
+import { BigInt,Address, BigDecimal,store, TypedMap } from "@graphprotocol/graph-ts"
+
 import {
   BidExecuted as BidExecutedEvent,
   BidOrderReturn as BidOrderReturnEvent,
+  piMarket,
   TokenMetaReturn as TokenMetaReturnEvent
 } from "../generated/piMarket/piMarket"
+import { piNFT } from "../generated/piNFT/piNFT"
 import {
   BidExecuted,
   BidOrderReturn,
   TokenMetaReturn
 } from "../generated/schema"
-
+import {  Nft, History, Sale, Bid  } from "../generated/schema"
 export function handleBidExecuted(event: BidExecutedEvent): void {
   let entity = new BidExecuted(
     event.transaction.hash.toHex() + "-" + event.logIndex.toString()
@@ -18,32 +22,64 @@ export function handleBidExecuted(event: BidExecutedEvent): void {
 }
 
 export function handleBidOrderReturn(event: BidOrderReturnEvent): void {
-  let entity = new BidOrderReturn(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.bid_bidId = event.params.bid.bidId
-  entity.bid_saleId = event.params.bid.saleId
-  entity.bid_sellerAddress = event.params.bid.sellerAddress
-  entity.bid_buyerAddress = event.params.bid.buyerAddress
-  entity.bid_price = event.params.bid.price
-  entity.bid_withdrawn = event.params.bid.withdrawn
-  entity.save()
+  let bidId = event.params.bid.bidId.toString();
+  let saleId = event.params.bid.saleId.toString();
+  let id = saleId+"/"+bidId;
+    let bidData = new Bid(id);
+    bidData.bidId = event.params.bid.bidId
+    bidData.saleId = event.params.bid.saleId;
+    bidData.sellerAddress = event.params.bid.sellerAddress
+    bidData.buyerAddress = event.params.bid.buyerAddress
+    bidData.price = event.params.bid.price
+    bidData.withdrawn = event.params.bid.withdrawn
+    bidData.save()
+  let contract = piMarket.bind(event.address)
+  let data = contract._tokenMeta(event.params.bid.saleId)
+  let nftId = (data.value1.toHexString()+"/"+data.value2.toString())
+  let nft = Nft.load(nftId)
+  if(nft == null){
+    nft = new Nft(nftId)
+  }
+  let bids = nft.bids;
+  bids.push(id);
+  nft.bids = bids;
+  nft.save();
 }
 
 export function handleTokenMetaReturn(event: TokenMetaReturnEvent): void {
-  let entity = new TokenMetaReturn(
-    event.transaction.hash.toHex() + "-" + event.logIndex.toString()
-  )
-  entity.data_saleId = event.params.data.saleId
-  entity.data_tokenContractAddress = event.params.data.tokenContractAddress
-  entity.data_tokenId = event.params.data.tokenId
-  entity.data_price = event.params.data.price
-  entity.data_directSale = event.params.data.directSale
-  entity.data_bidSale = event.params.data.bidSale
-  entity.data_status = event.params.data.status
-  entity.data_bidStartTime = event.params.data.bidStartTime
-  entity.data_bidEndTime = event.params.data.bidEndTime
-  entity.data_currentOwner = event.params.data.currentOwner
-  // entity.id = event.params.id
-  entity.save()
+  let nftId = event.params.data.tokenId.toString();
+    let contract = piMarket.bind(event.address)
+    let nft = new Nft(nftId);
+    nft.blockNumber = event.block.number
+    nft.transactionHash = event.transaction.hash
+    nft.tokenId = event.params.data.tokenId
+    nft.createdAt = event.block.timestamp;
+    nft.sale = event.params.data.saleId.toString();
+    let bids = nft.bids;
+    bids.push('0');
+    nft.bids = bids;
+    nft.save();
+    updateSaledata(event.params.data.saleId, event.address, event.params.data.directSale)
+}
+
+function updateSaledata(saleId: BigInt, address: Address, directSale: bool): void {
+  let id = saleId.toString()
+ 
+    let saleData = new Sale(id);
+    let contract = piMarket.bind(address)
+    let data = contract.try__tokenMeta(saleId);
+    saleData.saleId = data.value.value0;
+    saleData.tokenAddress = data.value.value1;
+    saleData.tokenID = data.value.value2;
+    saleData.price = data.value.value3;
+    if(directSale!==true){
+      saleData.saleType = "BidSale";
+      saleData.bidStartTime = data.value.value7;
+      saleData.bidEndTime = data.value.value8;
+    }else{
+      saleData.saleType = "DirectSale";
+    }
+    saleData.status = data.value.value6;
+    saleData.currentOwner = data.value.value9;
+    saleData.save();
 }

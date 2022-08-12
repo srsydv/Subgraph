@@ -30,8 +30,8 @@ dataSources:
           handler: handleApprovalForAll
         - event: ReceivedERC20(indexed address,indexed uint256,indexed address,uint256)
           handler: handleReceivedERC20
-        - event: RoyaltiesSetForTokenId(indexed uint256,(indexed address,uint96)[])
-          handler: handleRoyaltiesSetForTokenId
+        # - event: RoyaltiesSetForTokenId(indexed uint256,(indexed address,uint96)[])
+        #   handler: handleRoyaltiesSetForTokenId
         - event: Transfer(indexed address,indexed address,indexed uint256)
           handler: handleTransfer
         - event: TransferERC20(indexed uint256,indexed address,indexed address,uint256)

@@ -1,6 +1,7 @@
 import { BigInt, Bytes } from "@graphprotocol/graph-ts"
 import { log } from '@graphprotocol/graph-ts'
 import { store } from '@graphprotocol/graph-ts'
+import {Address, BigDecimal, TypedMap } from "@graphprotocol/graph-ts"
 import {
   piNFT,
   Approval,
@@ -14,6 +15,7 @@ import { ExampleEntity } from "../generated/schema"
 import { Energize } from "../generated/schema"
 import { ReleaseToken } from "../generated/schema"
 import { SetRoyalties, Royalities } from "../generated/schema"
+import {  Nft, History, Sale, Bid  } from "../generated/schema"
 export function handleApproval(event: Approval): void {
   // Entities can be loaded from the store using a string ID; this ID
   // needs to be unique across all entities of the same type
@@ -66,22 +68,39 @@ export function handleApproval(event: Approval): void {
   // - contract.tokenURI(...)
   // - contract.viewBalance(...)
 }
-
+import { piMarket } from "../generated/piMarket/piMarket"
 export function handleApprovalForAll(event: ApprovalForAll): void {}
 
 export function handleReceivedERC20(event: ReceivedERC20): void {
+  let tokenID = event.params._tokenId.toString();
+  let from = event.params._from.toString();
+  let AddERC20 = tokenID + "/" +from;
   let entity = Energize.load(event.transaction.from.toHex())
   if (!entity) {
     entity = new Energize(event.transaction.from.toHex())
-
-    // Entity fields can be set using simple assignments
-    // entity.count = BigInt.fromI32(0)
   }
+
+  let contract = piNFT.bind(event.address)
+  let NFTid = event.params._tokenId.toString()
+  let nft = Nft.load(NFTid)
+  if(nft == null){
+    nft = new Nft(NFTid)
+  }
+
+
   entity.from = event.params._from
   entity.tokenId = event.params._tokenId
   entity.erc20Contract = event.params._erc20Contract
   entity.value = event.params._value
   entity.save()
+  
+  let piNFTs = nft.piNFT;
+  if(piNFTs)
+  {
+    piNFTs.push(AddERC20);
+  }
+  nft.piNFT = piNFTs;
+  nft.save();
 
 }
 
@@ -112,13 +131,32 @@ export function handleReceivedERC20(event: ReceivedERC20): void {
 export function handleTransfer(event: Transfer): void {}
 
 export function handleTransferERC20(event: TransferERC20): void {
-  let entity = ReleaseToken.load(event.transaction.from.toHex())
+  let tokenID = event.params._tokenId.toString();
+  let to = event.params._to.toString()
+  let ReleaseERC20 = tokenID + "/" +to;
+  let entity = Energize.load(event.transaction.from.toHex())
   if (!entity) {
-    entity = new ReleaseToken(event.transaction.from.toHex())
+    entity = new Energize(event.transaction.from.toHex())
   }
-  entity.tokenId = event.params._tokenId
+
+  let contract = piNFT.bind(event.address)
+  let NFTid = event.params._tokenId.toString()
+  let nft = Nft.load(NFTid)
+  if(nft == null){
+    nft = new Nft(NFTid)
+  }
+
+
   entity.to = event.params._to
+  entity.tokenId = event.params._tokenId
   entity.erc20Contract = event.params._erc20Contract
   entity.value = event.params._value
   entity.save()
+  
+  let drop = nft.ReleaseToken;
+  if(drop){
+    drop.push(ReleaseERC20);
+  }
+  nft.piNFT = drop;
+  nft.save();
 }
